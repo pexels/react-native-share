@@ -48,6 +48,8 @@
 #import "EmailShare.h"
 #import "RNShareActivityItemSource.h"
 
+#import <Photos/Photos.h>
+
 @implementation RNShare
 
 RCTResponseErrorBlock rejectBlock;
@@ -183,6 +185,34 @@ RCT_EXPORT_METHOD(open:(NSDictionary *)options
                     }
                 } else {
                     [items addObject:data];
+                }
+            } else if([URL.scheme.lowercaseString isEqualToString:@"ph"]) {
+                NSString *assetIdentifier = [urlsArray[i] stringByReplacingOccurrencesOfString: @"ph://" withString: @""];
+                PHFetchResult *fetchResult = [PHAssetCollection fetchAssetCollectionsWithLocalIdentifiers: @[assetIdentifier] options:nil];
+                PHAsset *asset = fetchResult.firstObject;
+                NSString __block *url = @"";
+
+                if (asset){
+                  switch (asset.mediaType) {
+                    case PHAssetMediaTypeVideo:
+                      [[PHImageManager defaultManager] requestAVAssetForVideo:asset options:nil resultHandler:^(AVAsset * _Nullable asset, AVAudioMix * _Nullable audioMix, NSDictionary * _Nullable info) {
+                        AVURLAsset *urlAsset = (AVURLAsset*)asset;
+                        url = [[urlAsset URL] absoluteString];
+                      }];
+                      break;
+                    case PHAssetMediaTypeImage:
+                       [asset requestContentEditingInputWithOptions:nil completionHandler:^(PHContentEditingInput * _Nullable contentEditingInput, NSDictionary * _Nonnull info) {
+                             url = contentEditingInput.fullSizeImageURL.absoluteString;
+                           }
+                        ];
+                      break;
+                    default:
+                      RCTLogError(@"Asset type can't be shared");
+                      return;
+                  }
+
+                  do { } while( [url isEqual:@""] );
+                  [items addObject: url];
                 }
             } else {
                 [items addObject:URL];
