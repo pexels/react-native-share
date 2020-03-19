@@ -214,9 +214,7 @@ RCT_EXPORT_METHOD(open:(NSDictionary *)options
                               
                               url = [[urlAsset URL] absoluteString];
                                 
-                              AVURLAsset *asset2 = [[AVURLAsset alloc] initWithURL:[NSURL URLWithString:[url stringByAppendingPathComponent:@"video.mp4"]] options:nil];
-
-                              [items addObject: asset2];
+                              [items addObject: url];
                               dispatch_semaphore_signal(semaphore);
                               
                             }];
