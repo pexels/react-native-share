@@ -203,17 +203,13 @@ RCT_EXPORT_METHOD(open:(NSDictionary *)options
                 options2.deliveryMode = PHVideoRequestOptionsDeliveryModeHighQualityFormat;
                 options2.version = PHVideoRequestOptionsVersionCurrent;
                 
-                NSString __block *url = @"";
-                
-                
                 if (asset){
                     switch(asset.mediaType) {
                         case PHAssetMediaTypeVideo: {
                             [[PHImageManager defaultManager] requestAVAssetForVideo:asset options:options2 resultHandler:^(AVAsset * _Nullable asset, AVAudioMix * _Nullable audioMix, NSDictionary * _Nullable info) {
                               AVURLAsset *urlAsset = (AVURLAsset*)asset;
                               
-                              url = [[urlAsset URL] absoluteString];
-                                
+                              NSURL *url = [NSURL URLWithString:[[urlAsset URL] absoluteString]];
                               [items addObject: url];
                               dispatch_semaphore_signal(semaphore);
                               
