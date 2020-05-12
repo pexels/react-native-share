@@ -16,6 +16,8 @@
 #endif
 
 #import "InstagramStories.h"
+#import <AVFoundation/AVFoundation.h>
+@import Photos;
 
 @implementation InstagramStories
 RCT_EXPORT_MODULE();
@@ -96,11 +98,56 @@ backgroundBottomColor:(NSString *)backgroundBottomColor
     if (method) {
         if([method isEqualToString:@"shareBackgroundImage"]) {
             
-            NSURL *URL = [RCTConvert NSURL:options[@"backgroundImage"]];
+            __block UIImage *phAssetImage;
+            __block NSString * stringURL = options[@"backgroundImage"];
+            NSURL * testURL = [NSURL URLWithString: stringURL];
+            if([testURL.scheme.lowercaseString isEqualToString:@"ph"]) {
+                
+                NSString *assetIdentifier = [stringURL stringByReplacingOccurrencesOfString: @"ph://" withString: @""];
+                
+                PHImageRequestOptions *options = [[PHImageRequestOptions alloc] init];
+                options.synchronous = YES;
+                options.version = PHImageRequestOptionsVersionCurrent;
+                options.deliveryMode = PHImageRequestOptionsDeliveryModeOpportunistic;
+                options.resizeMode = PHImageRequestOptionsResizeModeNone;
+                
+                PHFetchResult *fetchResult = [PHAssetCollection fetchAssetCollectionsWithLocalIdentifiers: @[assetIdentifier] options:nil];
+                PHAsset *asset = fetchResult.firstObject;
+                
+                if (asset){
+                    switch(asset.mediaType) {
+                        case PHAssetMediaTypeImage: {
+                            [[PHImageManager defaultManager] requestImageForAsset:asset
+                               targetSize:PHImageManagerMaximumSize
+                              contentMode:PHImageContentModeDefault
+                                  options: options
+                            resultHandler:^void(UIImage *image, NSDictionary *info) {
+                                phAssetImage = image;
+                            }];
+                            break;
+                        }
+                        case PHAssetMediaTypeVideo: {
+                            
+                            
+                            break;
+                        }
+                        default: {
+                            RCTLogError(@"Asset type can't be shared");
+                            return;
+                        }
+                    }
+                }
+            }
+            
+            NSURL *URL = [RCTConvert NSURL:stringURL];
             if (URL == nil) {
                 RCTLogError(@"key 'backgroundImage' missing in options");
             } else {
                 UIImage *image = [UIImage imageWithData: [NSData dataWithContentsOfURL:URL]];
+                if(image == nil && phAssetImage) {
+                    //we have a phasset - let's use it's image
+                    image = phAssetImage;
+                }
                 
                 [self backgroundImage:UIImagePNGRepresentation(image) attributionURL:attrURL];
             }
@@ -126,14 +173,59 @@ backgroundBottomColor:(NSString *)backgroundBottomColor
             }
         } else if([method isEqualToString:@"shareBackgroundAndStickerImage"]) {
             RCTLog(@"method shareBackgroundAndStickerImage");
+
+            __block UIImage *phAssetImage;
+            __block NSString * stringURL = options[@"backgroundImage"];
+            NSURL * testURL = [NSURL URLWithString: stringURL];
+            if([testURL.scheme.lowercaseString isEqualToString:@"ph"]) {
+                
+                NSString *assetIdentifier = [stringURL stringByReplacingOccurrencesOfString: @"ph://" withString: @""];
+                
+                PHImageRequestOptions *options = [[PHImageRequestOptions alloc] init];
+                options.synchronous = YES;
+                options.version = PHImageRequestOptionsVersionCurrent;
+                options.deliveryMode = PHImageRequestOptionsDeliveryModeOpportunistic;
+                options.resizeMode = PHImageRequestOptionsResizeModeNone;
+                
+                PHFetchResult *fetchResult = [PHAssetCollection fetchAssetCollectionsWithLocalIdentifiers: @[assetIdentifier] options:nil];
+                PHAsset *asset = fetchResult.firstObject;
+                
+                if (asset){
+                    switch(asset.mediaType) {
+                        case PHAssetMediaTypeImage: {
+                            [[PHImageManager defaultManager] requestImageForAsset:asset
+                               targetSize:PHImageManagerMaximumSize
+                              contentMode:PHImageContentModeDefault
+                                  options: options
+                            resultHandler:^void(UIImage *image, NSDictionary *info) {
+                                phAssetImage = image;
+                            }];
+                            break;
+                        }
+                        case PHAssetMediaTypeVideo: {
+                            
+                            
+                            break;
+                        }
+                        default: {
+                            RCTLogError(@"Asset type can't be shared");
+                            return;
+                        }
+                    }
+                }
+            }
             
-            NSURL *backgroundURL = [RCTConvert NSURL:options[@"backgroundImage"]];
+            NSURL *backgroundURL = [RCTConvert NSURL:stringURL];
             NSURL *sticketURL = [RCTConvert NSURL:options[@"stickerImage"]];
             
             if (backgroundURL == nil || sticketURL == nil) {
                 RCTLogError(@"key 'backgroundImage' or 'stickerImage' missing in options");
             } else {
                 UIImage *backgroundImage = [UIImage imageWithData: [NSData dataWithContentsOfURL:backgroundURL]];
+                if(backgroundImage == nil && phAssetImage) {
+                    //we have a phasset - let's use it's image
+                    backgroundImage = phAssetImage;
+                }
                 UIImage *stickerImage = [UIImage imageWithData: [NSData dataWithContentsOfURL:sticketURL]];
                 
                 [self backgroundImage:UIImagePNGRepresentation(backgroundImage) stickerImage:UIImagePNGRepresentation(stickerImage) attributionURL:attrURL];
