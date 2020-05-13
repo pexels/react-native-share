@@ -49,6 +49,8 @@
 #import "EmailShare.h"
 #import "RNShareActivityItemSource.h"
 
+#import <Photos/Photos.h>
+
 @implementation RNShare
 
 RCTResponseErrorBlock rejectBlock;
@@ -169,6 +171,8 @@ RCT_EXPORT_METHOD(open:(NSDictionary *)options
         return;
     }
 
+    dispatch_semaphore_t    semaphore = dispatch_semaphore_create(0);
+    
     NSMutableArray<id> *items = [NSMutableArray array];
     NSString *message = [RCTConvert NSString:options[@"message"]];
     if (message) {
@@ -196,6 +200,49 @@ RCT_EXPORT_METHOD(open:(NSDictionary *)options
                 } else {
                     [items addObject:data];
                 }
+            } else if([URL.scheme.lowercaseString isEqualToString:@"ph"]) {
+                NSString *assetIdentifier = [urlsArray[i] stringByReplacingOccurrencesOfString: @"ph://" withString: @""];
+                PHFetchResult *fetchResult = [PHAssetCollection fetchAssetCollectionsWithLocalIdentifiers: @[assetIdentifier] options:nil];
+                PHAsset *asset = fetchResult.firstObject;
+                PHImageRequestOptions *options = [[PHImageRequestOptions alloc] init];
+                options.synchronous = YES;
+                options.version = PHImageRequestOptionsVersionCurrent;
+                options.deliveryMode = PHImageRequestOptionsDeliveryModeOpportunistic;
+                options.resizeMode = PHImageRequestOptionsResizeModeNone;
+                
+                PHVideoRequestOptions *options2 = [[PHVideoRequestOptions alloc] init];
+                options2.networkAccessAllowed = YES;
+                options2.deliveryMode = PHVideoRequestOptionsDeliveryModeHighQualityFormat;
+                options2.version = PHVideoRequestOptionsVersionCurrent;
+                
+                if (asset){
+                    switch(asset.mediaType) {
+                        case PHAssetMediaTypeVideo: {
+                            [[PHImageManager defaultManager] requestAVAssetForVideo:asset options:options2 resultHandler:^(AVAsset * _Nullable asset, AVAudioMix * _Nullable audioMix, NSDictionary * _Nullable info) {
+                              AVURLAsset *urlAsset = (AVURLAsset*)asset;
+                              
+                              NSURL *url = [NSURL URLWithString:[[urlAsset URL] absoluteString]];
+                              [items addObject: url];
+                              dispatch_semaphore_signal(semaphore);
+                              
+                            }];
+                            break;
+                        }
+                        case PHAssetMediaTypeImage: {
+                            [[PHImageManager defaultManager] requestImageDataForAsset:asset options:options resultHandler:^(NSData * _Nullable imageData, NSString * _Nullable dataUTI, UIImageOrientation orientation, NSDictionary * _Nullable info)
+                            {
+                                [items addObject:imageData];
+                                dispatch_semaphore_signal(semaphore);
+                            }];
+                            break;
+                        }
+                        default: {
+                            RCTLogError(@"Asset type can't be shared");
+                            return;
+                        }
+                    }
+                    
+                }
             } else {
                 [items addObject:URL];
             }
@@ -210,6 +257,7 @@ RCT_EXPORT_METHOD(open:(NSDictionary *)options
         }];
     }
 
+    dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
     if (items.count == 0) {
         RCTLogError(@"No `url` or `message` to share");
         return;
