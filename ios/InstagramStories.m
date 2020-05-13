@@ -238,9 +238,9 @@ backgroundBottomColor:(NSString *)backgroundBottomColor
             }
             
             NSURL *backgroundURL = [RCTConvert NSURL:options[@"backgroundImage"]];
-            NSURL *sticketURL = [RCTConvert NSURL:options[@"stickerImage"]];
+            NSURL *stickerURL = [RCTConvert NSURL:options[@"stickerImage"]];
             
-            if (backgroundURL == nil || sticketURL == nil) {
+            if (backgroundURL == nil || stickerURL == nil) {
                 RCTLogError(@"key 'backgroundImage' or 'stickerImage' missing in options");
             } else {
                 UIImage *backgroundImage = [UIImage imageWithData: [NSData dataWithContentsOfURL:backgroundURL]];
@@ -253,7 +253,7 @@ backgroundBottomColor:(NSString *)backgroundBottomColor
                     RCTLogError(@"key 'backgroundImage' missing in options");
                 }
                 else {
-                    UIImage *stickerImage = [UIImage imageWithData: [NSData dataWithContentsOfURL:sticketURL]];
+                    UIImage *stickerImage = [UIImage imageWithData: [NSData dataWithContentsOfURL:stickerURL]];
                     
                     [self backgroundImage:UIImagePNGRepresentation(backgroundImage) stickerImage:UIImagePNGRepresentation(stickerImage) attributionURL:attrURL];
                 }
@@ -312,6 +312,74 @@ backgroundBottomColor:(NSString *)backgroundBottomColor
                     NSData *videoData = [NSData dataWithContentsOfURL:URL];
                     
                     [self backgroundVideo:videoData attributionURL:attrURL];
+                }
+                else {
+                    RCTLogError(@"key 'backgroundVideo' not found");
+                }
+            } else {
+                RCTLogError(@"key 'backgroundVideo' too long");
+            }
+        }
+        else if([method isEqualToString:@"shareBackgroundVideoAndStickerImage"]) {
+            RCTLog(@"method shareBackgroundVideoAndStickerImage");
+            
+            dispatch_semaphore_t    semaphore = dispatch_semaphore_create(0);
+            
+            __block NSString * stringURL = options[@"backgroundVideo"];
+            NSURL * testURL = [NSURL URLWithString: stringURL];
+            if([testURL.scheme.lowercaseString isEqualToString:@"ph"]) {
+                
+                NSString *assetIdentifier = [stringURL stringByReplacingOccurrencesOfString: @"ph://" withString: @""];
+                
+                PHFetchResult *fetchResult = [PHAssetCollection fetchAssetCollectionsWithLocalIdentifiers: @[assetIdentifier] options:nil];
+                PHAsset *asset = fetchResult.firstObject;
+                
+                if (asset){
+                    switch(asset.mediaType) {
+                        case PHAssetMediaTypeVideo: {
+                            [[PHImageManager defaultManager] requestAVAssetForVideo:asset options:nil resultHandler:^(AVAsset *avAsset, AVAudioMix *audioMix, NSDictionary *info) {
+                                
+                                NSURL *url = (NSURL *)[[(AVURLAsset *)avAsset URL] fileReferenceURL];
+                                
+                                stringURL = [url absoluteString];
+                                
+                                dispatch_semaphore_signal(semaphore);
+                            }];
+                            
+                             break;
+                             
+                        }
+                        default: {
+                            RCTLogError(@"Asset type can't be shared");
+                            return;
+                        }
+                    }
+                }
+            }
+            
+            dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
+            NSURL *URL = [RCTConvert NSURL:stringURL];
+            NSURL *stickerURL = [RCTConvert NSURL:options[@"stickerImage"]];
+            
+            if (URL == nil || stickerURL == nil) {
+                RCTLogError(@"key 'backgroundVideo' or 'stickerImage' missing in options");
+            }
+                
+            AVURLAsset* videoAsset = [AVURLAsset URLAssetWithURL:URL options:nil];
+            CMTime videoDuration = videoAsset.duration;
+            float videoDurationSeconds = CMTimeGetSeconds(videoDuration);
+
+            NSLog(@"Video duration: %f seconds for file %@", videoDurationSeconds, videoAsset.URL.absoluteString);
+                
+            if (videoDurationSeconds <= 60.0f) {
+                if(videoAsset) {
+                    NSData *videoData = [NSData dataWithContentsOfURL:URL];
+                    
+                    UIImage *stickerImage = [UIImage imageWithData: [NSData dataWithContentsOfURL:stickerURL]];
+                    
+                    [self backgroundVideo:videoData
+                           stickerImage:UIImagePNGRepresentation(stickerImage)
+                           attributionURL:attrURL];
                 }
                 else {
                     RCTLogError(@"key 'backgroundVideo' not found");
