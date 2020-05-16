@@ -128,6 +128,30 @@ public abstract class ShareIntent {
                 this.getIntent().putExtra("jid", chatAddress);
             }
         }
+        else if(socialType.equals("instagram")) {
+            this.setIntent(new Intent("com.instagram.share.ADD_TO_FEED"));
+            this.getIntent().setPackage("com.instagram.android");
+            this.getIntent().addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+            ShareFile fileShare = getFileShare(options);
+            if(fileShare.isFile()) {
+                Uri _uri = fileShare.getURI();
+                String _mimeType = "image/*";
+                if (_uri.toString().toLowerCase().contains(".mp4") || _uri.toString().toLowerCase().contains(".mov")) {
+                    _mimeType = "video/*";
+                }
+
+                this.getIntent().setDataAndType(_uri, _mimeType);
+                this.getIntent().putExtra(Intent.EXTRA_STREAM, _uri);
+
+                this.reactContext.getCurrentActivity().grantUriPermission(
+                        "com.instagram.android", _uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            }
+
+            if (options.hasKey("attributionLink") && !options.getString("attributionLink").isEmpty()) {
+                this.getIntent().putExtra("content_url", options.getString("attributionLink"));
+            }
+        }
         else if(socialType.equals("instagram_stories")) {
             //ig stories keys
             this.setIntent(new Intent("com.instagram.share.ADD_TO_STORY"));
