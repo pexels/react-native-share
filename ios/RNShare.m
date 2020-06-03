@@ -44,6 +44,7 @@
 #import "WhatsAppShare.h"
 #import "InstagramShare.h"
 #import "InstagramStories.h"
+#import "FacebookStories.h"
 #import "GooglePlusShare.h"
 #import "EmailShare.h"
 #import "RNShareActivityItemSource.h"
@@ -91,6 +92,7 @@ RCT_EXPORT_MODULE()
 {
   return @{
     @"FACEBOOK": @"facebook",
+    @"FACEBOOK_STORIES": @"facebook-stories",
     @"TWITTER": @"twitter",
     @"GOOGLEPLUS": @"googleplus",
     @"WHATSAPP": @"whatsapp",
@@ -101,6 +103,7 @@ RCT_EXPORT_MODULE()
     @"SHARE_BACKGROUND_IMAGE": @"shareBackgroundImage",
     @"SHARE_STICKER_IMAGE": @"shareStickerImage",
     @"SHARE_BACKGROUND_AND_STICKER_IMAGE": @"shareBackgroundAndStickerImage",
+    @"SHARE_BACKGROUND_VIDEO_AND_STICKER_IMAGE": @"shareBackgroundVideoAndStickerImage",
   };
 }
 
@@ -115,6 +118,16 @@ RCT_EXPORT_METHOD(shareSingle:(NSDictionary *)options
             NSLog(@"TRY OPEN FACEBOOK");
             GenericShare *shareCtl = [[GenericShare alloc] init];
             [shareCtl shareSingle:options failureCallback: failureCallback successCallback: successCallback serviceType: SLServiceTypeFacebook inAppBaseUrl:@"fb://"];
+        } else if([social isEqualToString:@"facebook-stories"]) {
+            NSString *appId = [RCTConvert NSString:options[@"appId"]];
+            if (appId) {
+                NSLog(@"TRY OPEN FACEBOOK STORIES");
+                FacebookStories *shareCtl = [[FacebookStories alloc] init];
+                [shareCtl shareSingle:options failureCallback: failureCallback successCallback: successCallback];
+            } else {
+                RCTLogError(@"key 'appId' missing in options");
+                return;
+            }
         } else if([social isEqualToString:@"twitter"]) {
             NSLog(@"TRY OPEN Twitter");
             GenericShare *shareCtl = [[GenericShare alloc] init];
@@ -233,6 +246,7 @@ RCT_EXPORT_METHOD(open:(NSDictionary *)options
                 }
             } else {
                 [items addObject:URL];
+                dispatch_semaphore_signal(semaphore);
             }
         }
     }

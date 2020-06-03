@@ -82,8 +82,10 @@ class ShareSheet extends React.Component<Props> {
 }
 
 type Options = {
-  url: string,
+  url?: string,
   urls?: Array<string>,
+  filename?: string,
+  filenames?: Array<string>,
   type?: string,
   message?: string,
   title?: string,
@@ -92,10 +94,13 @@ type Options = {
   failOnCancel?: boolean,
   showAppsToView?: boolean,
   saveToFiles?: boolean,
+  appId: string,
 };
 type MultipleOptions = {
   url?: string,
   urls?: Array<string>,
+  filename?: string,
+  filenames?: Array<string>,
   type?: string,
   message?: string,
   title?: string,
@@ -155,14 +160,14 @@ const requireAndAskPermissions = async (options: Options | MultipleOptions): Pro
     try {
       const resultArr = await Promise.all(
         urls.map(
-          url =>
+          (url) =>
             new Promise((res, rej) => {
               NativeModules.RNShare.isBase64File(
                 url,
-                e => {
+                (e) => {
                   rej(e);
                 },
-                isBase64 => {
+                (isBase64) => {
                   res(isBase64);
                 },
               );
@@ -201,6 +206,7 @@ class RNShare {
   static Sheet: any;
   static Social = {
     FACEBOOK: NativeModules.RNShare.FACEBOOK || 'facebook',
+    FACEBOOK_STORIES: NativeModules.RNShare.FACEBOOK_STORIES || 'facebook-stories',
     PAGESMANAGER: NativeModules.RNShare.PAGESMANAGER || 'pagesmanager',
     TWITTER: NativeModules.RNShare.TWITTER || 'twitter',
     WHATSAPP: NativeModules.RNShare.WHATSAPP || 'whatsapp',
@@ -214,6 +220,16 @@ class RNShare {
 
   static InstagramStories = {
     SHARE_BACKGROUND_IMAGE: NativeModules.RNShare.SHARE_BACKGROUND_IMAGE || 'shareBackgroundImage',
+    SHARE_BACKGROUND_VIDEO: NativeModules.RNShare.SHARE_BACKGROUND_VIDEO || 'shareBackgroundVideo',
+    SHARE_STICKER_IMAGE: NativeModules.RNShare.SHARE_STICKER_IMAGE || 'shareStickerImage',
+    SHARE_BACKGROUND_AND_STICKER_IMAGE:
+      NativeModules.RNShare.SHARE_BACKGROUND_AND_STICKER_IMAGE || 'shareBackgroundAndStickerImage',
+    SHARE_BACKGROUND_VIDEO_AND_STICKER_IMAGE:
+      NativeModules.RNShare.SHARE_BACKGROUND_VIDEO_AND_STICKER_IMAGE || 'shareBackgroundVideoAndStickerImage',
+  };
+
+  static FacebookStories = {
+    SHARE_BACKGROUND_IMAGE: NativeModules.RNShare.SHARE_BACKGROUND_IMAGE || 'shareBackgroundImage',
     SHARE_STICKER_IMAGE: NativeModules.RNShare.SHARE_STICKER_IMAGE || 'shareStickerImage',
     SHARE_BACKGROUND_AND_STICKER_IMAGE:
       NativeModules.RNShare.SHARE_BACKGROUND_AND_STICKER_IMAGE || 'shareBackgroundAndStickerImage',
@@ -223,7 +239,7 @@ class RNShare {
     return new Promise((resolve, reject) => {
       requireAndAskPermissions(options)
         .then(() => {
-          if (options.url && !options.urls) {
+          if (Platform.OS === 'ios' && options.url && !options.urls) {
             // Backward compatibility with { Share } from react-native
             const url = options.url;
             delete options.url;
@@ -238,7 +254,7 @@ class RNShare {
 
           NativeModules.RNShare.open(
             options,
-            e => {
+            (e) => {
               return reject({ error: e });
             },
             (success, activityType) => {
@@ -257,7 +273,7 @@ class RNShare {
             },
           );
         })
-        .catch(e => reject(e));
+        .catch((e) => reject(e));
     });
   }
 
@@ -268,7 +284,7 @@ class RNShare {
           .then(() => {
             NativeModules.RNShare.shareSingle(
               options,
-              e => {
+              (e) => {
                 return reject({ error: e });
               },
               (e, activityType) => {
@@ -279,7 +295,7 @@ class RNShare {
               },
             );
           })
-          .catch(e => reject(e));
+          .catch((e) => reject(e));
       });
     } else {
       throw new Error('Not implemented');
@@ -291,10 +307,10 @@ class RNShare {
       return new Promise((resolve, reject) => {
         NativeModules.RNShare.isPackageInstalled(
           packageName,
-          e => {
+          (e) => {
             return reject({ error: e });
           },
-          isInstalled => {
+          (isInstalled) => {
             return resolve({
               isInstalled: isInstalled,
               message: 'Package is Installed',
