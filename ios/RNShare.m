@@ -246,6 +246,7 @@ RCT_EXPORT_METHOD(open:(NSDictionary *)options
                 }
             } else {
                 [items addObject:URL];
+                dispatch_semaphore_signal(semaphore);
             }
         }
     }
