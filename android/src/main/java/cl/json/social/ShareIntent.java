@@ -187,10 +187,6 @@ public abstract class ShareIntent {
                         try {
                             URL url = new URL(stickerSourceUrl);
                             String url_ext = "png";
-                            try {
-                                url_ext = stickerSourceUrl.substring(stickerSourceUrl.lastIndexOf(".") + 1);
-                            }
-                            catch (Exception e){}
                             Bitmap bitmap = BitmapFactory.decodeStream(url.openConnection().getInputStream());
                             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
                             bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
